@@ -1,0 +1,104 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- name: Check filesystems for low space and purge old kernels from /boot if needed
+  hosts: localhost
+  connection: local
+  vars_files: 
+    - deb_ubu-FS-low_space_purge_boot.conf.yml
+  vars:
+    # capacity_threshold: 20
+    # purge_boot: False
+    # nopurge: False
+    # send_alerts: True
+    # alert_email: "user@email.com"
+
+  tasks:
+    - debug: var=capacity_threshold
+
+    - name: Scan mounted filesystems and check their remaining capacity
+      assert: 
+        that: 'item.size_available > (item.size_total|float * {{ capacity_threshold|float / 100 }} )'
+      with_items: ansible_mounts
+      ignore_errors: yes
+      register: mount_status
+
+    - name: Are any filesystems nearly full?
+      set_fact: 
+        FS_full: "{{ item.item.mount }}"
+      when: item.failed is defined
+      with_items: mount_status.results
+      register: full_mounts
+      changed_when: item.failed is defined
+      notify:
+        - Create FS_full List
+        - Debug FS_full_list
+        - Send Alert
+
+    - name: Should kernels be purged from /boot?
+      set_fact: purge_boot=True
+      when: 
+        - item.item.mount == "/boot" 
+        - item.failed is defined
+        - not {{ nopurge }}
+      with_items: mount_status.results
+      changed_when: item.failed is defined
+      notify: 
+        - Gather List of Local Kernel Versions
+        - Create List of Kernel pkgs to Remove
+          #- Remove pkgs
+
+
+  handlers: 
+    - name: Create FS_full List
+      set_fact:
+        FS_full_list: "{{ full_mounts.results |map(attribute='ansible_facts') |select('defined') |list }}"
+
+    - name: Debug FS_full_list
+      debug:
+        msg: "{{ FS_full_list |map(attribute='FS_full') |list }}"
+
+    # Will gather list of all installed kernels except currently booted
+    - name: Gather List of Local Kernel Versions
+      shell: 
+        dpkg -l linux-* | awk '/^ii/{print $2}' | grep -v -e `uname -r | cut -f1,2 -d"-"` | grep -E 'linux-image-[0-9.-]{1,}' | cut -f3,4 -d"-" | sort -n
+      register: kernel_vers
+      when: purge_boot
+      changed_when: False
+      always_run: yes
+
+    # Will generate a list of kernel packages based on all installed kernel versions
+    # (minus currently running and the the latest prior installed version).
+    # Shouldn't remove any meta-packages. 
+    - name: Create List of Kernel pkgs to Remove
+      set_fact:
+        pkgs_2_remove:
+          - linux-image-{{ item }}-*
+          - linux-headers-{{ item }}-*
+          - linux-image-extra-{{ item }}-*
+      when: 
+        - purge_boot
+        - not item == "{{ kernel_vers.stdout_lines |last }}"
+      with_items: kernel_vers.stdout_lines
+
+    - name: Send Alert
+      mail:
+        to: "{{ alert_email }}"
+        sender: "root@{{ ansible_fqdn }}"
+        subject: "TEST - FS Alert: {{ ansible_fqdn }} has filesystem(s) with minimal space remaining"
+        body: "This is a test of mail alerting via ansible.\n
+
+          The following filesystems have less than {{ capacity_threshold }}% capacity remaining:\n
+          {{ FS_full_list |map(attribute='FS_full') |list |join('\n') }} \n
+
+          The '/boot' FS was purged:  {{ purge_boot }}\n
+
+          {% if purge_boot  %}
+            The following packages were removed:\n
+            {{ pkgs_2_remove |join('\n') }} \n
+          {% endif %}
+          "
+      when: 
+        - FS_full_list is defined
+        - send_alerts
+
