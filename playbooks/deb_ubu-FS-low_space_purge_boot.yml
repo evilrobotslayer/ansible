@@ -92,7 +92,7 @@
       mail:
         to: "{{ alert_email }}"
         sender: "root@{{ ansible_fqdn }}"
-        subject: "TEST - FS Alert: {{ ansible_fqdn }} has filesystem(s) with minimal space remaining"
+        subject: "Ansible FS Alert: {{ ansible_fqdn }} has filesystem(s) with minimal space remaining"
         body: "This is a test of mail alerting via ansible.\n
 
           The following filesystems have less than {{ capacity_threshold }}% capacity remaining:\n
