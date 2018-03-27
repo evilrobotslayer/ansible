@@ -85,7 +85,7 @@
         update_cache: yes 
         state: absent
         name: "{{ item }}"
-        with_items: "{{ pkgs_2_remove }}"
+        with_items: pkgs_2_remove 
         purge: yes
 
     - name: Send Alert
