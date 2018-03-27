@@ -1,8 +1,10 @@
 #!/usr/bin/env ansible-playbook
 # vim:ft=ansible:
+# This playbook requires fact gathering to be enabled.
 ---
 
 - name: Check filesystems for low space and purge old kernels from /boot if needed
+  ansible_required: 1.9
   hosts: localhost
   connection: local
   vars_files:
@@ -45,7 +47,9 @@
       notify:
         - Gather List of Local Kernel Versions
         - Create List of Kernel pkgs to Remove
+        - Debug pkgs_2_remove
         - Remove Old Kernels
+        - Debug apt
 
 
   handlers:
@@ -80,13 +84,23 @@
         - not item == "{{ kernel_vers.stdout_lines |last }}"
       with_items: kernel_vers.stdout_lines
 
+    - name: Debug pkgs_2_remove
+      debug: 
+        var: pkgs_2_remove
+
     - name: Remove Old Kernels
+      become: True
       apt: 
         update_cache: yes 
         state: absent
-        name: "{{ item }}"
-        with_items: pkgs_2_remove 
         purge: yes
+        name: "{{ item }}"
+      with_items: pkgs_2_remove
+      register: apt
+
+    - name: Debug apt
+      debug:
+        var: apt
 
     - name: Send Alert
       mail:
