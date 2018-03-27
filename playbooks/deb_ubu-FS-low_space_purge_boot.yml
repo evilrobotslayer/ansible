@@ -84,8 +84,8 @@
       apt: 
         update_cache: yes 
         state: absent
-        name: {{ item }}
-        with_items: {{ pkgs_2_remove }}
+        name: "{{ item }}"
+        with_items: "{{ pkgs_2_remove }}"
         purge: yes
 
     - name: Send Alert
