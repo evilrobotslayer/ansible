@@ -13,11 +13,21 @@ Debian/Ubuntu or Redhat/CentOS based linux distribution
 Role Variables
 --------------
 
-send_alerts
-alert_email
-capacity_threshold
+The variables that can be passed to this role and a brief description about
+them are as follows:
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+    # Alert when filesystems have less than this percentage of free space
+    capacity_threshold: 20
+
+    # Always purge '/boot' filesystem if set "True" (will not override nopurge=True)
+    purge_boot: False
+
+    # Never purge the '/boot' filesystem (takes precedence over purge_boot=True)
+    nopurge: False
+
+    # Alert settings
+    send_alerts: True
+    alert_email: "user@email.com"
 
 Dependencies
 ------------
@@ -41,4 +51,4 @@ BSD
 Author Information
 ------------------
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+George M. Grindlinger

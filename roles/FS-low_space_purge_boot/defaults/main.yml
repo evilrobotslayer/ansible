@@ -1,2 +1,8 @@
 ---
 # defaults file for FS-low_space_purge_boot
+capacity_threshold: 20
+purge_boot: False
+nopurge: False
+send_alerts: False
+alert_email: "user@email.com"
+

@@ -1,4 +1,5 @@
 #!/usr/bin/env ansible-playbook
+# vim:ft=ansible:
 ---
 
 - name: Check filesystems for low space and purge old kernels from /boot if needed
@@ -14,8 +15,6 @@
     # alert_email: "user@email.com"
 
   tasks:
-    - debug: var=capacity_threshold
-
     - name: Scan mounted filesystems and check their remaining capacity
       assert: 
         that: 'item.size_available > (item.size_total|float * {{ capacity_threshold|float / 100 }} )'
